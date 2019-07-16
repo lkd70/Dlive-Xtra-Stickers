@@ -3,6 +3,8 @@
 let _linoUsername = null;
 let _displayName = null;
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 const [ head ] = document.getElementsByTagName('head');
 const s = document.createElement('style');
 s.setAttribute('type', 'text/css');
@@ -22,32 +24,41 @@ const request = data => new Promise((resolve, reject) => {
 	xhr.send(data);
 });
 
-const addEmotes = () => {
-	const [ box ] = document.getElementsByClassName('emote-tab-inner');
-	for (let c = 0; c < box.childNodes.length; c++) {
-		const child = box.childNodes[c];
-		if (child.id) child.remove();
+const addEmotes = async () => {
+	let box;
+	let i = 0;
+	while (typeof box === 'undefined') {
+		i++;
+		[ box ] = document.getElementsByClassName('emote-tab-inner');
+		await sleep(100);
+		if (i === 5) break;
 	}
-
-	const stickers = JSON.parse(localStorage.getItem('stickers'));
-	stickers.forEach(sticker => {
-		if (!document.getElementById(sticker)) {
-			const img = document.createElement('div');
-			img.style = `width: 25%;height: 56px;padding: 4px;cursor: pointer;display: -webkit-box;
-			display: -ms-flexbox;display: flex;-webkit-box-align: center;-ms-flex-align: center;
-			align-items: center;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;`;
-			img.id = sticker;
-			img.className = 'emote-item position-relative';
-			img.setAttribute('data-v-41f53d46', '');
-			img.innerHTML = `<img id="${sticker}" data-v-41f53d46=""
-				src="https://images.prd.dlivecdn.com/emote/${sticker}" style="max-width: 100%; max-height: 100%;"/>
-				<svg data-v-41f53d46="" class="position-absolute clickable delete-emote"
-				style="width: 18px; height: 18px; right: -9px; top: -9px; z-index: 50;">
-				<image id="delete-${sticker}" class="removeme"
-				xlink:href="/img/delete-emote-darkmode.d4f5e96a.svg" width="18" height="18"></image></svg>`;
-			box.appendChild(img);
+	if (i !== 5) {
+		for (let c = 0; c < box.childNodes.length; c++) {
+			const child = box.childNodes[c];
+			if (child.id) child.remove();
 		}
-	});
+
+		const stickers = JSON.parse(localStorage.getItem('stickers'));
+		stickers.forEach(sticker => {
+			if (!document.getElementById(sticker)) {
+				const img = document.createElement('div');
+				img.style = `width: 25%;height: 56px;padding: 4px;cursor: pointer;display: -webkit-box;
+				display: -ms-flexbox;display: flex;-webkit-box-align: center;-ms-flex-align: center;
+				align-items: center;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;`;
+				img.id = sticker;
+				img.className = 'emote-item position-relative';
+				img.setAttribute('data-v-41f53d46', '');
+				img.innerHTML = `<img id="${sticker}" data-v-41f53d46=""
+					src="https://images.prd.dlivecdn.com/emote/${sticker}" style="max-width: 100%; max-height: 100%;"/>
+					<svg data-v-41f53d46="" class="position-absolute clickable delete-emote"
+					style="width: 18px; height: 18px; right: -9px; top: -9px; z-index: 50;">
+					<image id="delete-${sticker}" class="removeme"
+					xlink:href="/img/delete-emote-darkmode.d4f5e96a.svg" width="18" height="18"></image></svg>`;
+				box.appendChild(img);
+			}
+		});
+	}
 };
 
 document.addEventListener('click', e => {
@@ -114,18 +125,22 @@ document.addEventListener('click', e => {
 	}
 });
 
-const getPageUsername = () => {
+
+const getPageUsername = async () => {
 	const matches = window.location.pathname.match(/\/([a-zA-Z0-9-_]+)/);
 	if (matches.length > 1) {
 		[ , _displayName ] = matches;
 		if (!(_displayName in [ 's', 'c' ])) {
-			request(`
-			{"operationName":"LivestreamPage","variables":{"displayname":"${_displayName}",
-			"add":false,"isLoggedIn":true,"isMe":false},"extensions":{"persistedQuery":
-			{"version":1,"sha256Hash":
-			"04574dd80c2af59df37676b17ef0b4ffa963b254e8862b043168780aa94aa52f"}}}`).then(ls => {
-				_linoUsername = ls.userByDisplayName.username;
-			});
+			while (_linoUsername === null) {
+				await sleep(1000);
+				request(`
+					{"operationName":"LivestreamPage","variables":{"displayname":"${_displayName}",
+					"add":false,"isLoggedIn":true,"isMe":false},"extensions":{"persistedQuery":
+					{"version":1,"sha256Hash":
+					"04574dd80c2af59df37676b17ef0b4ffa963b254e8862b043168780aa94aa52f"}}}`).then(ls => {
+					_linoUsername = ls.userByDisplayName.username;
+				});
+			}
 		}
 	}
 };

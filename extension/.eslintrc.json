@@ -28,7 +28,6 @@
 			"always"
 		],
 		"for-direction": "error",
-		"no-await-in-loop": "error",
 		"no-extra-parens": "error",
 		"no-template-curly-in-string": "error",
 		"valid-jsdoc": "error",
@@ -61,7 +60,6 @@
 		"no-invalid-this": "error",
 		"no-iterator": "error",
 		"no-lone-blocks": "error",
-		"no-loop-func": "error",
 		"no-magic-numbers": [
 			"off",
 			{
