@@ -2,7 +2,7 @@
 
   "manifest_version": 2,
   "name": "Dlive Xtra Stickers",
-	"version": "0.5",
+	"version": "0.6",
 	"author": "LKD70",
   "description": "Adds extra sticker slots to Dlive",
   "icons": {

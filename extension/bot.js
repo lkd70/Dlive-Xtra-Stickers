@@ -1,8 +1,5 @@
 'use strict';
 
-let _linoUsername = null;
-let _displayName = null;
-
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const [ head ] = document.getElementsByTagName('head');
@@ -18,11 +15,26 @@ head.appendChild(s);
 const request = data => new Promise((resolve, reject) => {
 	const xhr = new XMLHttpRequest();
 	xhr.open('POST', 'https://graphigo.prd.dlive.tv/', true);
-	xhr.setRequestHeader('authorization', JSON.parse(window.localStorage.getItem('store')).accessToken.token);
+	xhr.setRequestHeader(
+		'authorization',
+		JSON.parse(window.localStorage.getItem('store')).accessToken.token
+	);
 	xhr.onload = () => resolve(JSON.parse(xhr.responseText).data);
 	xhr.onerror = error => reject(error);
 	xhr.send(data);
 });
+
+const getDisplayName = () => {
+	const matches = window.location.pathname.match(/\/([a-zA-Z0-9-_]+)/);
+	if (matches.length > 1) {
+		const [ , displayName ] = matches;
+		if (displayName in [ 's', 'c' ]) {
+			return undefined;
+		}
+		return displayName;
+	}
+	return undefined;
+};
 
 const addEmotes = async () => {
 	let box;
@@ -42,6 +54,11 @@ const addEmotes = async () => {
 		const stickers = JSON.parse(localStorage.getItem('stickers'));
 		stickers.forEach(sticker => {
 			if (!document.getElementById(sticker)) {
+				if (sticker === stickers[0]) {
+					const hr = document.createElement('hr');
+					hr.style = 'border: #202020 solid 2px;';
+					box.appendChild(hr);
+				}
 				const img = document.createElement('div');
 				img.style = `width: 25%;height: 56px;padding: 4px;cursor: pointer;display: -webkit-box;
 				display: -ms-flexbox;display: flex;-webkit-box-align: center;-ms-flex-align: center;
@@ -63,32 +80,27 @@ const addEmotes = async () => {
 
 document.addEventListener('click', e => {
 	if (e.target && e.target.className === 'emote-img margint-3 clickable') {
-		Array.prototype.forEach.call(
-			document.getElementsByClassName('emote-popup-menu'),
-			menu => {
-				const div = document.createElement('div');
-				div.innerHTML = 'Add Xtra Emote';
-				div.style = '-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;}';
-				div.className = 'menuitem d-menu-item flex-align-center text-12-regular text-grey clickable text-nowrap';
-				div.onclick = () => {
-					let stickers = [];
-					const image = div.parentNode.parentNode.childNodes[0].childNodes[0].childNodes[0].childNodes[1].src.split('/');
-					const sticker = image[image.length - 1];
-					if (localStorage.getItem('stickers') !== null) {
-						stickers = JSON.parse(localStorage.getItem('stickers'));
-					}
-					if (!stickers.includes(sticker)) {
-						stickers.push(sticker);
-						localStorage.setItem('stickers', JSON.stringify(stickers));
-					}
-				};
-				menu.appendChild(div);
-			}
-		);
-	} else if (
-		e.target &&
-		e.target.src === 'https://dlive.tv/img/smile-icon.4d0482c6.svg'
-	) {
+		Array.prototype.forEach.call(document.getElementsByClassName('emote-popup-menu'), menu => {
+			const div = document.createElement('div');
+			div.innerHTML = 'Add Xtra Emote';
+			div.style = '-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;}';
+			div.className =
+				'menuitem d-menu-item flex-align-center text-12-regular text-grey clickable text-nowrap';
+			div.onclick = () => {
+				let stickers = [];
+				const image = div.parentNode.parentNode.childNodes[0].childNodes[0].childNodes[0].childNodes[1].src.split('/');
+				const sticker = image[image.length - 1];
+				if (localStorage.getItem('stickers') !== null) {
+					stickers = JSON.parse(localStorage.getItem('stickers'));
+				}
+				if (!stickers.includes(sticker)) {
+					stickers.push(sticker);
+					localStorage.setItem('stickers', JSON.stringify(stickers));
+				}
+			};
+			menu.appendChild(div);
+		});
+	} else if (e.target && e.target.src === 'https://dlive.tv/img/smile-icon.4d0482c6.svg') {
 		addEmotes();
 	} else if (e.target && e.target.id) {
 		let stickers = JSON.parse(localStorage.getItem('stickers'));
@@ -97,7 +109,7 @@ document.addEventListener('click', e => {
 				"operationName":"SendStreamChatMessage",
 				"variables":{
 					"input":{
-						"streamer":"${_linoUsername}",
+						"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}",
 						"message":":emote/mine/dlive/${e.target.id}:",
 						"roomRole":"Member",
 						"subscribing":true
@@ -125,22 +137,29 @@ document.addEventListener('click', e => {
 	}
 });
 
-
 const getPageUsername = async () => {
-	const matches = window.location.pathname.match(/\/([a-zA-Z0-9-_]+)/);
-	if (matches.length > 1) {
-		[ , _displayName ] = matches;
-		if (!(_displayName in [ 's', 'c' ])) {
-			while (_linoUsername === null) {
+	const displayName = getDisplayName();
+	if (typeof displayName !== 'undefined') {
+		let names = window.localStorage.getItem('names');
+		if (names === null) {
+			window.localStorage.setItem('names', '{}');
+			names = '{}';
+		}
+		names = JSON.parse(names);
+		if (!(displayName in names)) {
+			let userName = null;
+			while (userName === null) {
 				await sleep(1000);
 				request(`
-					{"operationName":"LivestreamPage","variables":{"displayname":"${_displayName}",
-					"add":false,"isLoggedIn":true,"isMe":false},"extensions":{"persistedQuery":
-					{"version":1,"sha256Hash":
-					"04574dd80c2af59df37676b17ef0b4ffa963b254e8862b043168780aa94aa52f"}}}`).then(ls => {
-					_linoUsername = ls.userByDisplayName.username;
+						{"operationName":"LivestreamPage","variables":{"displayname":"${displayName}",
+						"add":false,"isLoggedIn":true,"isMe":false},"extensions":{"persistedQuery":
+						{"version":1,"sha256Hash":
+						"04574dd80c2af59df37676b17ef0b4ffa963b254e8862b043168780aa94aa52f"}}}`).then(ls => {
+					userName = ls.userByDisplayName.username;
 				});
 			}
+			names[displayName] = userName;
+			window.localStorage.setItem('names', JSON.stringify(names));
 		}
 	}
 };
