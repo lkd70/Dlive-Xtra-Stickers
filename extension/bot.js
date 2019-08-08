@@ -105,23 +105,9 @@ document.addEventListener('click', e => {
 	} else if (e.target && e.target.id) {
 		let stickers = JSON.parse(localStorage.getItem('stickers'));
 		if (stickers.includes(e.target.id)) {
-			request(`{
-				"operationName":"SendStreamChatMessage",
-				"variables":{
-					"input":{
-						"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}",
-						"message":":emote/mine/dlive/${e.target.id}:",
-						"roomRole":"Member",
-						"subscribing":true
-					}
-				},
-				"extensions":{
-					"persistedQuery":{
-						"version":1,
-						"sha256Hash":"e755f412252005c7d7865084170b9ec13547e9951a1296f7dfe92d377e760b30"
-					}
-				}
-			}`);
+			// For some reason if you split a mutation across multiple lines, it cries... We'll just leave this one long...
+			// eslint-disable-next-line max-len
+			request(`{"query":"mutation SendStreamChatMessage($input: SendStreamchatMessageInput!) {sendStreamchatMessage(input: $input) {err{code} message {... on ChatText {id}}}}","variables":{"input":{"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}","message":":emote/mine/dlive/${e.target.id}:", "roomRole": "Owner", "subscribing": true}},"operationName":"SendStreamChatMessage"}"}`);
 		} else if (e.target.id.split('-')[0] === 'delete') {
 			stickers = [];
 			if (localStorage.getItem('stickers') !== null) {
@@ -150,11 +136,16 @@ const getPageUsername = async () => {
 			let userName = null;
 			while (userName === null) {
 				await sleep(1000);
-				request(`
-						{"operationName":"LivestreamPage","variables":{"displayname":"${displayName}",
-						"add":false,"isLoggedIn":true,"isMe":false},"extensions":{"persistedQuery":
-						{"version":1,"sha256Hash":
-						"04574dd80c2af59df37676b17ef0b4ffa963b254e8862b043168780aa94aa52f"}}}`).then(ls => {
+				request(`{
+					"query":"query LivestreamPage()
+					{
+						userByDisplayName (displayname: '${displayName}')
+						{
+							username
+						}
+					}",
+					"operationName":"LivestreamPage"
+				}`).then(ls => {
 					userName = ls.userByDisplayName.username;
 				});
 			}
