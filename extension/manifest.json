@@ -25,7 +25,8 @@
 		"activeTab",
 		"tabs",
     "webRequest",
-    "https://graphigo.prd.dlive.tv/"
+		"https://graphigo.prd.dlive.tv/",
+		"*://graphigo.prd.dlive.tv/*"
   ]
 
 }
