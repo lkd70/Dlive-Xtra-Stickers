@@ -80,15 +80,16 @@ const addEmotes = async () => {
 
 document.addEventListener('click', e => {
 	if (e.target && e.target.className === 'emote-img margint-3 clickable') {
-		Array.prototype.forEach.call(document.getElementsByClassName('emote-popup-menu'), menu => {
+		Array.prototype.forEach.call(document.getElementsByClassName('menu-section'), menu => {
 			const div = document.createElement('div');
-			div.innerHTML = 'Add Xtra Emote';
+			div.innerHTML = 'Add Xtra Sticker';
 			div.style = '-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;}';
 			div.className =
 				'menuitem d-menu-item flex-align-center text-12-regular text-grey clickable text-nowrap';
 			div.onclick = () => {
 				let stickers = [];
-				const image = div.parentNode.parentNode.childNodes[0].childNodes[0].childNodes[0].childNodes[1].src.split('/');
+				const image = div.parentNode.parentNode.parentNode.parentNode.parentNode.firstChild
+					.firstChild.childNodes[1].firstChild.firstChild.firstChild.childNodes[1].src.split('/');
 				const sticker = image[image.length - 1];
 				if (localStorage.getItem('stickers') !== null) {
 					stickers = JSON.parse(localStorage.getItem('stickers'));
@@ -98,16 +99,18 @@ document.addEventListener('click', e => {
 					localStorage.setItem('stickers', JSON.stringify(stickers));
 				}
 			};
-			menu.appendChild(div);
+			menu.childNodes[0].childNodes[0].insertBefore(div, menu.childNodes[0].childNodes[0].firstChild);
 		});
 	} else if (e.target && e.target.src === 'https://dlive.tv/img/smile-icon.4d0482c6.svg') {
 		addEmotes();
 	} else if (e.target && e.target.id) {
 		let stickers = JSON.parse(localStorage.getItem('stickers'));
 		if (stickers.includes(e.target.id)) {
-			// For some reason if you split a mutation across multiple lines, it cries... We'll just leave this one long...
-			// eslint-disable-next-line max-len
-			request(`{"query":"mutation SendStreamChatMessage($input: SendStreamchatMessageInput!) {sendStreamchatMessage(input: $input) {err{code} message {... on ChatText {id}}}}","variables":{"input":{"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}","message":":emote/mine/dlive/${e.target.id}:", "roomRole": "Owner", "subscribing": true}},"operationName":"SendStreamChatMessage"}"}`);
+			request('{"query":"mutation SendStreamChatMessage($input: SendStreamchatMessageInput!) ' +
+				'{sendStreamchatMessage(input: $input) {err{code} message {... on ChatText {id}}}}","variables": ' +
+				`{"input":{"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}", ` +
+				`"message":":emote/mine/dlive/${e.target.id}:", "roomRole": "Owner", "subscribing": true}}` +
+				',"operationName":"SendStreamChatMessage"}"}');
 		} else if (e.target.id.split('-')[0] === 'delete') {
 			stickers = [];
 			if (localStorage.getItem('stickers') !== null) {
