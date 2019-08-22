@@ -19,12 +19,13 @@ const request = data => new Promise((resolve, reject) => {
 		'authorization',
 		JSON.parse(window.localStorage.getItem('store')).accessToken.token
 	);
-	xhr.onload = () => resolve(JSON.parse(xhr.responseText).data);
+	xhr.onload = () => resolve(xhr.responseText);
 	xhr.onerror = error => reject(error);
+    //console.log("Sending: " + data);
 	xhr.send(data);
 });
 
-const getDisplayName = () => {
+const getStreamName = () => {
 	const matches = window.location.pathname.match(/\/([a-zA-Z0-9-_]+)/);
 	if (matches.length > 1) {
 		const [ , displayName ] = matches;
@@ -34,6 +35,34 @@ const getDisplayName = () => {
 		return displayName;
 	}
 	return undefined;
+};
+
+const getStreamUser = () => {
+    return JSON.parse(window.localStorage.getItem('names'))[getStreamName()];
+};
+
+const getUserName = () => {
+    return JSON.parse(
+        atob(JSON.parse(
+            window.localStorage.getItem('store')).accessToken.token.split('.')[1]
+        )
+    ).username;
+};
+
+const getDisplayName = () => {
+    return JSON.parse(
+        atob(JSON.parse(
+            window.localStorage.getItem('store')).accessToken.token.split('.')[1]
+        )
+    ).displayname;
+};
+
+const getAvatar = () => {
+    return JSON.parse(
+        atob(JSON.parse(
+            window.localStorage.getItem('store')).accessToken.token.split('.')[1]
+        )
+    ).avatar;
 };
 
 const addEmotes = async () => {
@@ -106,11 +135,21 @@ document.addEventListener('click', e => {
 	} else if (e.target && e.target.id) {
 		let stickers = JSON.parse(localStorage.getItem('stickers'));
 		if (stickers.includes(e.target.id)) {
-			request('{"query":"mutation SendStreamChatMessage($input: SendStreamchatMessageInput!) ' +
-				'{sendStreamchatMessage(input: $input) {err{code} message {... on ChatText {id}}}}","variables": ' +
-				`{"input":{"streamer":"${JSON.parse(window.localStorage.getItem('names'))[getDisplayName()]}", ` +
-				`"message":":emote/mine/dlive/${e.target.id}:", "roomRole": "Owner", "subscribing": true}}` +
-				',"operationName":"SendStreamChatMessage"}"}');
+        //console.log(`sending ${e.target.id}`);
+            let pageuser = getStreamUser();
+            //console.log(pageuser);
+
+            let username = getUserName();
+            //console.log(username);
+
+            request('{"operationName":"SendStreamChatMessage",' +
+                '"variables":{"input":{"streamer":"'+ pageuser + '",' +
+                '"message":":emote/mine/'+username+'/'+e.target.id+':",'+
+                '"roomRole":"Member","subscribing":true}},'+
+                '"extensions":{"persistedQuery":{"version":1,'+
+                '"sha256Hash":"e755f412252005c7d7865084170b9ec1354'+
+                '7e9951a1296f7dfe92d377e760b30"}}}').then(
+                    function(data){console.log(data)});
 		} else if (e.target.id.split('-')[0] === 'delete') {
 			stickers = [];
 			if (localStorage.getItem('stickers') !== null) {
@@ -126,8 +165,8 @@ document.addEventListener('click', e => {
 	}
 });
 
-const getPageUsername = async () => {
-	const displayName = getDisplayName();
+const fetchPageUsername = async () => {
+	const displayName = getStreamName();
 	if (typeof displayName !== 'undefined') {
 		let names = window.localStorage.getItem('names');
 		if (names === null) {
@@ -139,31 +178,28 @@ const getPageUsername = async () => {
 			let userName = null;
 			while (userName === null) {
 				await sleep(1000);
-				request(`{
-					"query":"query LivestreamPage()
-					{
-						userByDisplayName (displayname: '${displayName}')
-						{
-							username
-						}
-					}",
-					"operationName":"LivestreamPage"
-				}`).then(ls => {
+				request('{"operationName":"LivestreamPageRefetch",' +
+				`"variables":{"displayname":"${displayName}",` +
+				'"add":false,"isLoggedIn":true},' +
+				'"extensions":{"persistedQuery":{"version":1,' +
+				'"sha256Hash":"c5158fe0ae255b6de40c989ac4e7ed9a6881ed19c996a4cd6ee426fdd6254fa4"}}}'
+				).then(ls => {
 					userName = ls.userByDisplayName.username;
 				});
 			}
 			names[displayName] = userName;
 			window.localStorage.setItem('names', JSON.stringify(names));
+			return userName;
 		}
 	}
 };
 
-getPageUsername();
+fetchPageUsername();
 
 let oLoc = location.href;
 setInterval(() => {
 	if (location.href !== oLoc) {
-		getPageUsername();
+		fetchPageUsername();
 		oLoc = location.href;
 	}
 }, 1000);
